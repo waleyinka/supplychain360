@@ -4,14 +4,14 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "dev", "main" ]
+    branches: [ "dev" ]
 
 jobs:
 
   # ---------------------------------------------------------
-  # 1. PYTHON VALIDATION (Ingestion Scripts & Airflow Utils)
+  # 1. PYTHON INGESTION VALIDATION (CI)
   # ---------------------------------------------------------
-  python_ci:
+  ingestion-validation:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,62 +22,77 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: 'pip'
 
       - name: Install Dependencies
         run: |
-          pip install flake8 pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt fi
+          pip install -r airflow/ingestion/requirements.txt
 
       - name: Lint Python Scripts
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          pip install flake8
+          flake8 airflow/ingestion --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests (if any)
         run: |
-          if [ -d "tests" ]; then pytest; else echo "No tests found, skipping..."; fi
+          if [ -d "tests" ]; then pytest -q; else echo "No tests folder found"; fi
 
 
   # ---------------------------------------------------------
-  # 2. DBT PROJECT VALIDATION (Syntax & Compilation Check)
+  # 2. SNOWFLAKE + DBT VALIDATION (CI)
   # ---------------------------------------------------------
-  dbt-ci:
-    needs: python_ci
+  dbt-validation:
+    needs: ingestion-validation
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup dbt
-        run: pip install dbt-snowflake
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Initialize dbt
+      - name: Install dbt
+        run: pip install dbt-core dbt-snowflake
+
+      - name: Create dbt Profile
+        run: |
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          supplychain360:
+            target: prod
+            outputs:
+              prod:
+                type: snowflake
+                account: ${{ secrets.DBT_ACCOUNT }}
+                user: ${{ secrets.DBT_USER }}
+                password: ${{ secrets.DBT_PASSWORD }}
+                role: ${{ secrets.DBT_ROLE }}
+                database: ${{ secrets.DBT_DATABASE }}
+                warehouse: ${{ secrets.DBT_WAREHOUSE }}
+                schema: ${{ secrets.DBT_SCHEMA }}
+                threads: 4
+          EOF
+
+      - name: Install dbt Packages
         working-directory: ./airflow/dbt/supplychain360_dbt
         run: dbt deps
 
-      - name: dbt Parse & Compile
+      - name: dbt Debug
         working-directory: ./airflow/dbt/supplychain360_dbt
-        run: dbt parse
+        run: dbt debug --target prod
 
-      - name: dbt Build
+      - name: dbt Build (Full Transform)
         working-directory: ./airflow/dbt/supplychain360_dbt
-        env:
-          DBT_ACCOUNT: ${{ secrets.DBT_ACCOUNT }}
-          DBT_USER: ${{ secrets.DBT_USER }}
-          DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
-          DBT_ROLE: ${{ secrets.DBT_ROLE }}
-          DBT_DATABASE: ${{ secrets.DBT_DATABASE }}
-          DBT_WAREHOUSE: ${{ secrets.DBT_WAREHOUSE }}
-          DBT_SCHEMA: ${{ secrets.DBT_SCHEMA }}
         run: dbt build --target prod
 
+
   # ---------------------------------------------------------
-  # 3. DOCKER BUILD & DEPLOY (CD)
+  # 3. DOCKER BUILD & PUSH (CD)
   # ---------------------------------------------------------
   docker-deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: dbt-ci
+    needs: dbt-validation
     runs-on: ubuntu-latest
 
     steps:
@@ -90,7 +105,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Airflow Image
+      - name: Build and Push Image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -99,27 +114,29 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:${{ github.sha }}
 
+
   # ---------------------------------------------------------
   # 4. EMAIL NOTIFICATION
   # ---------------------------------------------------------
-  notify:
-    needs: [python_ci, dbt-ci, docker-deploy]
+  send-notification:
+    needs: [ingestion-validation, dbt-validation, docker-deploy]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Status Email
+      - name: Send Mail
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "SupplyChain360 CI/CD Status: ${{ needs.docker-deploy.result || needs.dbt-ci.result }}"
+          subject: "SupplyChain360 CI/CD Status: ${{ job.status }}"
           to: ${{ secrets.MAIL_RECIPIENT }}
           from: "GitHub Actions - SupplyChain360"
           body: |
-            Pipeline result: ${{ job.status }}
-            Branch: ${{ github.ref_name }}
+            The SupplyChain360 pipeline has finished.
+
+            Status: ${{ job.status }}
             Commit: ${{ github.sha }}
-            View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
