@@ -1,0 +1,53 @@
+# models/marts/facts/fct_schema.yml
+
+version: 2
+
+models:
+
+  - name: fct_product_stockouts
+    columns:
+      - name: date_sk
+        tests:
+          - relationships:
+              arguments:
+                field: date_sk
+                to: ref('dim_dates')
+      - name: warehouse_id
+        tests:
+          - relationships:
+              arguments:
+                field: warehouse_id
+                to: ref('dim_warehouses')
+      - name: product_id
+        tests:
+          - relationships:
+              arguments:
+                field: product_id
+                to: ref('dim_products')
+
+  - name: fct_supplier_performance
+    columns:
+      - name: supplier_id
+        tests:
+          - relationships:
+              arguments:
+                field: supplier_id
+                to: ref('dim_suppliers')
+
+  - name: fct_regional_sales_demand
+    columns:
+      - name: date_sk
+        tests:
+          - relationships:
+              arguments:
+                field: date_sk
+                to: ref('dim_dates')
+
+  - name: fct_warehouse_efficiency
+    columns:
+      - name: warehouse_id
+        tests:
+          - relationships:
+              arguments:
+                field: warehouse_id
+                to: ref('dim_warehouses')

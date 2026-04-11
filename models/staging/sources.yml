@@ -1,0 +1,80 @@
+# models/staging/sources.yml
+
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Raw operational data ingested into Snowflake from the SupplyChain360 S3 bucket.
+      This layer represents the untransformed source of truth and is used to build
+      staging models, preserving source system fidelity for traceability and auditing.
+
+    database: supplychain360
+    schema: raw
+
+    # Global freshness (fallback)
+    config:
+      loaded_at_field: _ingestion_timestamp
+      freshness:
+        warn_after: {count: 48, period: hour}
+        error_after: {count: 96, period: hour}
+
+    tables:
+
+      # -------------------------
+      # DIMENSIONS (slow-changing)
+      # -------------------------
+      - name: suppliers
+        description: Master data for all suppliers.
+        config:
+          freshness:
+            warn_after: {count: 7, period: day}
+            error_after: {count: 14, period: day}
+
+      - name: warehouses
+        description: Master data for warehouse locations
+        config:
+          freshness:
+            warn_after: {count: 7, period: day}
+            error_after: {count: 14, period: day}
+
+      - name: store_locations
+        description: Master data for retail store locations
+        config:
+          freshness:
+            warn_after: {count: 7, period: day}
+            error_after: {count: 14, period: day}
+
+      - name: products
+        description: Product master data.
+        config:
+          freshness:
+            warn_after: {count: 7, period: day}
+            error_after: {count: 14, period: day}
+
+      # -------------------------
+      # OPERATIONS DATA (Mid/high-velocity)
+      # -------------------------
+      - name: store_sales
+        description: Transactional sales data.
+        config:
+          freshness:
+            warn_after: {count: 2, period: hour}
+            error_after: {count: 4, period: hour}
+
+      - name: inventory
+        description: >
+          Inventory snapshots across warehouses and stores.
+        config:
+          freshness:
+            warn_after: {count: 12, period: hour}
+            error_after: {count: 24, period: hour}
+
+      - name: shipments
+        description: >
+          Shipment-level data tracking the movement of goods between suppliers,
+          warehouses, and stores.
+        config:
+          freshness:
+            warn_after: {count: 24, period: hour}
+            error_after: {count: 48, period: hour}

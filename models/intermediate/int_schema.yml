@@ -1,0 +1,111 @@
+# models/intermediate/int_schema.yml
+
+version: 2
+
+models:
+
+  - name: int_dedup_products
+    columns:
+      - name: product_id
+        tests: [not_null, unique]
+
+  - name: int_dedup_suppliers
+    columns:
+      - name: supplier_id
+        tests: [not_null, unique]
+
+  - name: int_dedup_warehouses
+    columns:
+      - name: warehouse_id
+        tests: [not_null, unique]
+
+  - name: int_dedup_stores
+    columns:
+      - name: store_id
+        tests: [not_null, unique]
+
+  - name: int_dedup_store_sales
+    columns:
+      - name: transaction_id
+        tests: [not_null, unique]
+
+  - name: int_dedup_shipments
+    columns:
+      - name: shipment_id
+        tests: [not_null, unique]
+
+  - name: int_dedup_inventory
+    columns:
+      - name: snapshot_date
+        tests: [not_null]
+
+  - name: int_inventory_stock_status
+    columns:
+      - name: date_sk
+        tests:
+          - relationships:
+              arguments:
+                field: date_sk
+                to: ref('dim_dates')
+
+      - name: product_id
+        tests:
+          - relationships:
+              arguments:
+                field: product_id
+                to: ref('dim_products')
+
+      - name: warehouse_id
+        tests:
+          - relationships:
+              arguments:
+                field: warehouse_id
+                to: ref('dim_warehouses')
+
+  - name: int_store_sales_enriched
+    columns:
+      - name: date_sk
+        tests:
+          - relationships:
+              arguments:
+                field: date_sk
+                to: ref('dim_dates')
+
+      - name: product_id
+        tests:
+          - relationships:
+              arguments:
+                field: product_id
+                to: ref('dim_products')
+
+      - name: store_id
+        tests:
+          - relationships:
+              arguments:
+                field: store_id
+                to: ref('dim_stores')
+
+  - name: int_product_demand_trends
+    columns:
+      - name: date_sk
+        tests:
+          - relationships:
+              arguments:
+                field: date_sk
+                to: ref('dim_dates')
+
+  - name: int_supplier_delivery_performance
+    columns:
+      - name: date_sk
+        tests:
+          - relationships:
+              arguments:
+                field: date_sk
+                to: ref('dim_dates')
+
+      - name: supplier_id
+        tests:
+          - relationships:
+              arguments:
+                field: supplier_id
+                to: ref('dim_suppliers')
