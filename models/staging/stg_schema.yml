@@ -1,0 +1,304 @@
+# models/staging/stg_schema.yml
+
+version: 2
+
+models:
+
+  # ============================
+  # Store Locations
+  # ============================
+  - name: stg_store_locations
+    description: Cleaned store location data with deduplication based on latest ingestion timestamp
+    columns:
+      - name: store_id
+        description: Unique identifier for each store
+        tests:
+          - not_null
+
+      - name: store_name
+        description: Name of the store
+
+      - name: city
+        description: City where the store is located
+
+      - name: state
+        description: State or region where the store is located
+
+      - name: region
+        description: Business-defined region
+
+      - name: store_open_date
+        description: Date the store opened
+
+      - name: ingestion_timestamp
+        description: Timestamp when the record was ingested into raw
+
+      - name: dbt_loaded_at
+        description: Timestamp when dbt processed the record
+
+      - name: source_table
+        description: Source table name
+
+  # ============================
+  # Shipments
+  # ============================
+  - name: stg_shipments
+    description: Cleaned shipment data used for delivery and replenishment analysis
+    columns:
+      - name: shipment_id
+        description: Unique identifier for each shipment
+        tests:
+          - not_null
+
+      - name: warehouse_id
+        description: Warehouse receiving or holding stock
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                field: warehouse_id
+                to: ref('stg_warehouses')
+              config:
+                severity: warn
+
+      - name: store_id
+        description: Store associated with the shipment
+
+      - name: product_id
+        description: Product included in the shipment
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                field: product_id
+                to: ref('stg_products')
+              config:
+                severity: warn
+
+      - name: quantity_shipped
+        description: Quantity shipped in this record
+
+      - name: shipment_date
+        description: Date the shipment was sent
+
+      - name: expected_delivery_date
+        description: Expected delivery date
+
+      - name: actual_delivery_date
+        description: Actual delivery date
+
+      - name: carrier
+        description: Logistics provider
+
+      - name: ingestion_timestamp
+        description: Raw ingestion timestamp
+
+      - name: dbt_loaded_at
+        description: dbt processing timestamp
+
+      - name: source_table
+        description: Source table name
+
+  # ============================
+  # Store Sales
+  # ============================
+  - name: stg_store_sales
+    description: Cleaned transactional sales data
+    columns:
+      - name: transaction_id
+        description: Unique transaction identifier
+        tests:
+          - not_null
+
+      - name: store_id
+        description: Store where the sale occurred
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                field: store_id
+                to: ref('stg_store_locations')
+              config:
+                severity: warn
+
+      - name: product_id
+        description: Product sold
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                field: product_id
+                to: ref('stg_products')
+              config:
+                severity: warn
+
+      - name: quantity_sold
+        description: Units sold
+
+      - name: unit_price
+        description: Price per unit
+
+      - name: discount_pct
+        description: Discount applied
+
+      - name: sale_amount
+        description: Total sale amount
+
+      - name: transaction_timestamp
+        description: Timestamp of the transaction
+
+      - name: ingestion_timestamp
+        description: Raw ingestion timestamp
+
+      - name: dbt_loaded_at
+        description: dbt processing timestamp
+
+      - name: source_table
+        description: Source table name
+
+  # ============================
+  # Suppliers
+  # ============================
+  - name: stg_suppliers
+    description: Cleaned supplier master data
+    columns:
+      - name: supplier_id
+        description: Supplier identifier
+        tests:
+          - not_null
+
+      - name: supplier_name
+        description: Supplier name
+        tests:
+          - not_null
+
+      - name: category
+        description: Supplier category
+
+      - name: country
+        description: Supplier country
+
+      - name: ingestion_timestamp
+        description: Raw ingestion timestamp
+
+      - name: dbt_loaded_at
+        description: dbt processing timestamp
+
+      - name: source_table
+        description: Source table name
+
+  # ============================
+  # Warehouses
+  # ============================
+  - name: stg_warehouses
+    description: Cleaned warehouse master data
+    columns:
+      - name: warehouse_id
+        description: Warehouse identifier
+        tests:
+          - not_null
+
+      - name: city
+        description: Warehouse city
+
+      - name: state
+        description: Warehouse state
+
+      - name: ingestion_timestamp
+        description: Raw ingestion timestamp
+
+      - name: dbt_loaded_at
+        description: dbt processing timestamp
+
+      - name: source_table
+        description: Source table name
+
+  # ============================
+  # Products
+  # ============================
+  - name: stg_products
+    description: Cleaned product master data
+    columns:
+      - name: product_id
+        description: Product identifier
+        tests:
+          - not_null
+
+      - name: product_name
+        description: Product name
+        tests:
+          - not_null
+
+      - name: category
+        description: Product category
+
+      - name: brand
+        description: Product brand
+
+      - name: supplier_id
+        description: Supplier identifier
+        tests:
+          - relationships:
+              arguments:
+                field: supplier_id
+                to: ref('stg_suppliers')
+              config:
+                severity: warn
+
+      - name: unit_price
+        description: Unit price
+
+      - name: ingestion_timestamp
+        description: Raw ingestion timestamp
+
+      - name: dbt_loaded_at
+        description: dbt processing timestamp
+
+      - name: source_table
+        description: Source table name
+
+  # ============================
+  # Inventory
+  # ============================
+  - name: stg_inventory
+    description: Cleaned inventory snapshot data
+    columns:
+      - name: warehouse_id
+        description: Warehouse identifier
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                field: warehouse_id
+                to: ref('stg_warehouses')
+              config:
+                severity: warn
+
+      - name: product_id
+        description: Product identifier
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                field: product_id
+                to: ref('stg_products')
+              config:
+                severity: warn
+
+      - name: quantity_available
+        description: Units available in inventory
+
+      - name: reorder_threshold
+        description: Reorder threshold
+
+      - name: snapshot_date
+        description: Inventory snapshot date
+
+      - name: ingestion_timestamp
+        description: Raw ingestion timestamp
+
+      - name: dbt_loaded_at
+        description: dbt processing timestamp
+
+      - name: source_table
+        description: Source table name
