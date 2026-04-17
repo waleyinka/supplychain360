@@ -12,11 +12,16 @@ __pycache__/
 *.pem
 *.pub
 service_account.json
+service_account.json:Zone.Identifier
 snowflake.sql
+sheets.py
 
 # --- Terraform ---
 terraform/.terraform/
+terraform/**/.terraform/
+terraform/*.tfstate
 terraform/**/*.tfstate
+terraform/*.tfstate.backup
 terraform/**/*.tfstate.backup
 terraform/*.tfvars
 terraform/**/*.tfvars
@@ -28,6 +33,9 @@ dbt_packages/
 target/
 logs/
 dbt_internal_packages/
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
 
 # --- Airflow ---
 airflow/airflow.db
@@ -37,3 +45,10 @@ airflow/logs/
 # --- Others ---
 include/pipeline/
 include/transform/
+
+# --- Absolute paths (project-specific) ---
+/home/iamomowale/dec_launchpad/project/airflow/.env
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/target
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_packages
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/logs/
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_internal_packages/
