@@ -1,45 +1,39 @@
+# --- Python ---
+venv/
+__pycache__/
+*.pyc
+
+# --- Environment files ---
 .env
-/home/iamomowale/dec_launchpad/project/airflow/.env
+*.env
 
-# Google
+# --- Secrets & Keys ---
+*.p8
+*.pem
+*.pub
 service_account.json
-service_account.json:Zone.Identifier
-sheets.py
+snowflake.sql
 
-# Terraform
+# --- Terraform ---
 terraform/.terraform/
-terraform/**/.terraform/
-terraform/*.tfstate
 terraform/**/*.tfstate
-terraform/*.tfstate.backup
 terraform/**/*.tfstate.backup
 terraform/*.tfvars
 terraform/**/*.tfvars
 !terraform/**/*.tfvars.example
 .terraform.lock.hcl
 
-# dbt
-dbt_project/target/
-dbt_project/dbt_packages/
-dbt_project/logs/
+# --- dbt ---
+dbt_packages/
+target/
+logs/
+dbt_internal_packages/
 
-# Keys
-rsa_private_key.p8
-rsa_public_key.pub
-snowflake_tf_snow_key.p8
-service_account.json:Zone.Identifier
+# --- Airflow ---
+airflow/airflow.db
+airflow/airflow-webserver.pid
+airflow/logs/
 
-# Snowflake
-snowflake.sql
-
-
-# Dir
-include/pipeline
-include/transform
-
-
-# dbt
-/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/target
-/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_packages
-/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/logs/
-/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_internal_packages/
+# --- Others ---
+include/pipeline/
+include/transform/
