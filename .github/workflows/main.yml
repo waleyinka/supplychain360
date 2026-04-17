@@ -1,0 +1,125 @@
+name: SupplyChain360-CI-CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "dev", "main" ]
+
+jobs:
+
+  # ---------------------------------------------------------
+  # 1. PYTHON VALIDATION (Ingestion Scripts & Airflow Utils)
+  # ---------------------------------------------------------
+  python_ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt fi
+
+      - name: Lint Python Scripts
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Run Unit Tests
+        run: |
+          if [ -d "tests" ]; then pytest; else echo "No tests found, skipping..."; fi
+
+
+  # ---------------------------------------------------------
+  # 2. DBT PROJECT VALIDATION (Syntax & Compilation Check)
+  # ---------------------------------------------------------
+  dbt-ci:
+    needs: python_ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup dbt
+        run: pip install dbt-snowflake
+
+      - name: Initialize dbt
+        working-directory: ./airflow/dbt/supplychain360_dbt
+        run: dbt deps
+
+      - name: dbt Parse & Compile
+        working-directory: ./airflow/dbt/supplychain360_dbt
+        run: dbt parse
+
+      - name: dbt Build
+        working-directory: ./airflow/dbt/supplychain360_dbt
+        env:
+          DBT_ACCOUNT: ${{ secrets.DBT_ACCOUNT }}
+          DBT_USER: ${{ secrets.DBT_USER }}
+          DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
+          DBT_ROLE: ${{ secrets.DBT_ROLE }}
+          DBT_DATABASE: ${{ secrets.DBT_DATABASE }}
+          DBT_WAREHOUSE: ${{ secrets.DBT_WAREHOUSE }}
+          DBT_SCHEMA: ${{ secrets.DBT_SCHEMA }}
+        run: dbt build --target prod
+
+  # ---------------------------------------------------------
+  # 3. DOCKER BUILD & DEPLOY (CD)
+  # ---------------------------------------------------------
+  docker-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: dbt-ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Airflow Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:${{ github.sha }}
+
+  # ---------------------------------------------------------
+  # 4. EMAIL NOTIFICATION
+  # ---------------------------------------------------------
+  notify:
+    needs: [python_ci, dbt-ci, docker-deploy]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Status Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "SupplyChain360 CI/CD Status: ${{ needs.docker-deploy.result || needs.dbt-ci.result }}"
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: "GitHub Actions - SupplyChain360"
+          body: |
+            Pipeline result: ${{ job.status }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

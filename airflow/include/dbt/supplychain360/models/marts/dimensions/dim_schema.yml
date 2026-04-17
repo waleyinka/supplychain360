@@ -1,0 +1,39 @@
+# models/marts/dimensions/dim_schema.yml
+
+version: 2
+
+models:
+  - name: dim_dates
+    columns:
+      - name: date_sk
+        tests: [not_null, unique]
+      - name: date
+        tests: [not_null, unique]
+
+  - name: dim_products
+    columns:
+      - name: product_sk
+        tests: [not_null, unique]
+      - name: product_id
+        tests: [not_null]
+
+  - name: dim_stores
+    columns:
+      - name: store_sk
+        tests: [not_null, unique]
+      - name: store_id
+        tests: [not_null]
+
+  - name: dim_suppliers
+    columns:
+      - name: supplier_sk
+        tests: [not_null, unique]
+      - name: supplier_id
+        tests: [not_null]
+
+  - name: dim_warehouses
+    columns:
+      - name: warehouse_sk
+        tests: [not_null, unique]
+      - name: warehouse_id
+        tests: [not_null]
