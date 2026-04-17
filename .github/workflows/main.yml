@@ -4,14 +4,24 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
+<<<<<<< HEAD
     branches: [ "dev" ]
+=======
+    branches: [ "dev", "main" ]
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)
 
 jobs:
 
   # ---------------------------------------------------------
+<<<<<<< HEAD
   # 1. PYTHON INGESTION VALIDATION (CI)
   # ---------------------------------------------------------
   ingestion-validation:
+=======
+  # 1. PYTHON VALIDATION (Ingestion Scripts & Airflow Utils)
+  # ---------------------------------------------------------
+  python_ci:
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +32,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+<<<<<<< HEAD
 
       - name: Install Dependencies
         run: |
@@ -44,10 +55,36 @@ jobs:
     needs: ingestion-validation
     runs-on: ubuntu-latest
 
+=======
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt fi
+
+      - name: Lint Python Scripts
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Run Unit Tests
+        run: |
+          if [ -d "tests" ]; then pytest; else echo "No tests found, skipping..."; fi
+
+
+  # ---------------------------------------------------------
+  # 2. DBT PROJECT VALIDATION (Syntax & Compilation Check)
+  # ---------------------------------------------------------
+  dbt-ci:
+    needs: python_ci
+    runs-on: ubuntu-latest
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+<<<<<<< HEAD
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -93,6 +130,37 @@ jobs:
   # ---------------------------------------------------------
   docker-deploy:
     needs: dbt-validation
+=======
+      - name: Setup dbt
+        run: pip install dbt-snowflake
+
+      - name: Initialize dbt
+        working-directory: ./airflow/dbt/supplychain360_dbt
+        run: dbt deps
+
+      - name: dbt Parse & Compile
+        working-directory: ./airflow/dbt/supplychain360_dbt
+        run: dbt parse
+
+      - name: dbt Build
+        working-directory: ./airflow/dbt/supplychain360_dbt
+        env:
+          DBT_ACCOUNT: ${{ secrets.DBT_ACCOUNT }}
+          DBT_USER: ${{ secrets.DBT_USER }}
+          DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
+          DBT_ROLE: ${{ secrets.DBT_ROLE }}
+          DBT_DATABASE: ${{ secrets.DBT_DATABASE }}
+          DBT_WAREHOUSE: ${{ secrets.DBT_WAREHOUSE }}
+          DBT_SCHEMA: ${{ secrets.DBT_SCHEMA }}
+        run: dbt build --target prod
+
+  # ---------------------------------------------------------
+  # 3. DOCKER BUILD & DEPLOY (CD)
+  # ---------------------------------------------------------
+  docker-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: dbt-ci
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)
     runs-on: ubuntu-latest
 
     steps:
@@ -105,7 +173,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+<<<<<<< HEAD
       - name: Build and Push Image
+=======
+      - name: Build and Push Airflow Image
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -114,23 +186,36 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:${{ github.sha }}
 
+<<<<<<< HEAD
 
   # ---------------------------------------------------------
   # 4. EMAIL NOTIFICATION
   # ---------------------------------------------------------
   send-notification:
     needs: [ingestion-validation, dbt-validation, docker-deploy]
+=======
+  # ---------------------------------------------------------
+  # 4. EMAIL NOTIFICATION
+  # ---------------------------------------------------------
+  notify:
+    needs: [python_ci, dbt-ci, docker-deploy]
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)
     if: always()
     runs-on: ubuntu-latest
 
     steps:
+<<<<<<< HEAD
       - name: Send Mail
+=======
+      - name: Send Status Email
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
+<<<<<<< HEAD
           subject: "SupplyChain360 CI/CD Status: ${{ job.status }}"
           to: ${{ secrets.MAIL_RECIPIENT }}
           from: "GitHub Actions - SupplyChain360"
@@ -140,3 +225,13 @@ jobs:
             Status: ${{ job.status }}
             Commit: ${{ github.sha }}
             Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+=======
+          subject: "SupplyChain360 CI/CD Status: ${{ needs.docker-deploy.result || needs.dbt-ci.result }}"
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: "GitHub Actions - SupplyChain360"
+          body: |
+            Pipeline result: ${{ job.status }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+>>>>>>> 3d39d6e8 (Initial commit for supplychain360 project)

@@ -1,6 +1,45 @@
-# you shouldn't commit these into source control
-# these are the default directory names, adjust/add to fit your needs
-target/
-dbt_packages/
-logs/
-dbt_internal_packages/
+.env
+/home/iamomowale/dec_launchpad/project/airflow/.env
+
+# Google
+service_account.json
+service_account.json:Zone.Identifier
+sheets.py
+
+# Terraform
+terraform/.terraform/
+terraform/**/.terraform/
+terraform/*.tfstate
+terraform/**/*.tfstate
+terraform/*.tfstate.backup
+terraform/**/*.tfstate.backup
+terraform/*.tfvars
+terraform/**/*.tfvars
+!terraform/**/*.tfvars.example
+.terraform.lock.hcl
+
+# dbt
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# Keys
+rsa_private_key.p8
+rsa_public_key.pub
+snowflake_tf_snow_key.p8
+service_account.json:Zone.Identifier
+
+# Snowflake
+snowflake.sql
+
+
+# Dir
+include/pipeline
+include/transform
+
+
+# dbt
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/target
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_packages
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/logs/
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_internal_packages/
