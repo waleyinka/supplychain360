@@ -2,19 +2,14 @@
 
 ## Navigation
 
- - Overview
-
- - Project Architecture
- 
- - Data Sources
- 
- - [The Medallion Pipeline (dbt)]
- 
- - Infrastructure & DevOps
- 
- - How to Reproduce
- 
- - Business Insights
+ - [Overview](#overview)
+ - [Project Architecture](#project-architecture)
+ - [Data Sources](#data-sources)
+ - [The Medallion Pipeline (dbt)](#the-medallion-pipeline-dbt)
+ - [Workflow Orchestration](#workflow-orchestration)
+ - [CI/CD Pipeline](#cicd-pipeline)
+ - [How to Reproduce](#how-to-reproduce)
+ - [Business Insights](#business-insights)
 
 ## Overview
 SupplyChain360 is a unified supply chain analytics project built to solve key operational inefficiencies within a large retail distribution network in the United States. The company manages product movement across multiple warehouses, suppliers, and retail stores, but critical data is currently fragmented across separate systems, leading to delayed reporting and limited visibility into day to day operations.
@@ -70,7 +65,7 @@ The pipeline follows a rigorous lifecycle inside the Snowflake Data Warehouse, m
 ## The Medallion Pipeline (dbt)
 Used dbt to transform the **Raw (Staging)** data into a cleaned **Silver (Intemediate)** layer and a business-ready **Gold (Marts)** layer. For a more detailed breakdown of the pipeline structure, please [click here](./airflow/include/dbt/supplychain360/readme.md).
 
-![dbt lineage](image.png)
+![dbt_lineage](airflow/include/dbt/supplychain360/image.png)
 
 ### 1. Staging (Raw)
 Initial cleaning and standardization of raw source data. Schema evolution handling and Parquet enforcement.
