@@ -1,0 +1,70 @@
+# --- Python ---
+venv/
+__pycache__/
+*.pyc
+<<<<<<< HEAD
+
+# --- Environment files ---
+.env
+*.env
+
+=======
+
+# --- Environment files ---
+.env
+*.env
+
+>>>>>>> bbd326e3 (Initial commit for supplychain360 project)
+# --- Secrets & Keys ---
+*.p8
+*.pem
+*.pub
+service_account.json
+<<<<<<< HEAD
+service_account.json:Zone.Identifier
+snowflake.sql
+sheets.py
+=======
+snowflake.sql
+>>>>>>> bbd326e3 (Initial commit for supplychain360 project)
+
+# --- Terraform ---
+terraform/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.backup
+terraform/*.tfvars
+terraform/**/*.tfvars
+!terraform/**/*.tfvars.example
+.terraform.lock.hcl
+
+# --- dbt ---
+dbt_packages/
+target/
+logs/
+dbt_internal_packages/
+<<<<<<< HEAD
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+=======
+>>>>>>> bbd326e3 (Initial commit for supplychain360 project)
+
+# --- Airflow ---
+airflow/airflow.db
+airflow/airflow-webserver.pid
+airflow/logs/
+
+# --- Others ---
+include/pipeline/
+<<<<<<< HEAD
+include/transform/
+
+# --- Absolute paths (project-specific) ---
+/home/iamomowale/dec_launchpad/project/airflow/.env
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/target
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_packages
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/logs/
+/home/iamomowale/dec_launchpad/supplychain360/airflow/include/dbt/supplychain360/dbt_internal_packages/
+=======
+include/transform/
+>>>>>>> bbd326e3 (Initial commit for supplychain360 project)

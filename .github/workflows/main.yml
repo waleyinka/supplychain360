@@ -1,0 +1,128 @@
+name: SupplyChain360-CI-CD
+
+on:
+  push:
+    branches: [ "main" ] # Triggers when you push to main
+  pull_request:
+    branches: [ "main", "dev" ] # Triggers on PRs to catch errors early
+
+jobs:
+  # --- STAGE 1: CI - PYTHON LINTING & TESTING ---
+  python-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install Linting Tools
+        run: |
+          pip install flake8 pytest black
+          # Install project dependencies if requirements.txt exists
+          if [ -f airflow/requirements.txt ]; then pip install -r airflow/requirements.txt; fi
+
+      - name: Code Formatting Check (Black)
+        run: black . --check  # Fails if code isn't formatted correctly
+
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Unit Tests
+        run: |
+          # Only runs if a 'tests' folder exists
+          if [ -d "tests" ]; then pytest; else echo "No tests found, skipping..."; fi
+
+  # --- STAGE 2: CI - DBT VALIDATION ---
+  dbt-validation:
+    needs: python-validation # Only runs if Python checks pass
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        run: pip install dbt-snowflake
+
+      - name: Create dbt Profile
+        run: |
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          supplychain360:
+            target: dev
+            outputs:
+              dev:
+                type: snowflake
+                account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+                user: ${{ secrets.SNOWFLAKE_USER }}
+                password: ${{ secrets.SNOWFLAKE_PASSWORD }}
+                role: ${{ secrets.SNOWFLAKE_ROLE }}
+                database: ${{ secrets.SNOWFLAKE_DATABASE }}
+                warehouse: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+                schema: RAW
+                threads: 4
+          EOF
+
+      - name: dbt Dependencies
+        working-directory: ./airflow/include/dbt/supplychain360
+        run: dbt deps
+
+      - name: dbt Debug & Compile
+        working-directory: ./airflow/include/dbt/supplychain360
+        run: |
+          dbt debug --target dev
+          dbt compile --target dev
+
+  # --- STAGE 3: CD - DOCKER BUILD & PUSH ---
+  docker-deploy:
+    # Only deploy when pushing to the 'main' branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: dbt-validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Airflow Image
+        uses: docker/build-push-action@v5
+        with:
+          # Use the 'airflow' directory as the build context
+          context: ./airflow
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/supplychain360:${{ github.sha }}
+
+  # --- STAGE 4: NOTIFICATION ---
+  notify:
+    needs: [python-validation, dbt-validation, docker-deploy]
+    if: always() # Run even if previous steps failed to alert you
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Status Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "SupplyChain360 Build Status: ${{ job.status }}"
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: "GitHub Actions"
+          body: |
+            SupplyChain360 Pipeline Finished.
+            Status: ${{ job.status }}
+            Commit: ${{ github.sha }}
+            Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
